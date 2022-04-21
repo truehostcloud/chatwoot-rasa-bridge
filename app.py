@@ -18,7 +18,10 @@ def send_to_bot(sender, message):
         json=data,
         headers=headers,
     )
-    return r.json()[0]["text"]
+    response_json = r.json()
+    response_text_list = [response_object["text"] for response_object in response_json]
+    response_text = "\n".join(response_text_list)
+    return response_text
 
 
 def send_to_chatwoot(account, conversation, message):
