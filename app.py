@@ -85,7 +85,7 @@ def rasa():
     account = data["account"]["id"]
     create_message = {}
     if data.get("event") == "message_updated":
-        contact = data["conversation"]["contact_inbox"]["id"]
+        contact = data["conversation"]["contact_inbox"]["contact_id"]
         content_attributes = data["content_attributes"]
         submitted_values = content_attributes.get("submitted_values", [])
         submitted_values_text_list = [submitted_text.get("value") for submitted_text in submitted_values]
