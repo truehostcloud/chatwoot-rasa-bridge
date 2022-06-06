@@ -96,6 +96,7 @@ def rasa():
         and message.startswith(f"@{bot_name}")
     ):
         contact = data["conversation"]["contact_inbox"]["contact_id"]
+        message = message.replace(f"@{bot_name}", "")
         is_bot_mention = True
     if data.get("event") == "message_updated":
         contact = data["conversation"]["contact_inbox"]["contact_id"]
