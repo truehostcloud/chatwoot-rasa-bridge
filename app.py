@@ -87,6 +87,16 @@ def rasa():
     account = data.get("account").get("id")
     create_message = {}
     conversation_status = data.get("conversation", {}).get("status")
+    allow_bot_mention = os.getenv("ALLOW_BOT_MENTION", "False")
+    bot_name = os.getenv("BOT_NAME")
+    is_bot_mention = False
+    if (
+        allow_bot_mention == "True"
+        and message_type == "outgoing"
+        and message.startswith(f"@{bot_name}")
+    ):
+        contact = data["conversation"]["contact_inbox"]["contact_id"]
+        is_bot_mention = True
     if data.get("event") == "message_updated":
         contact = data["conversation"]["contact_inbox"]["contact_id"]
         content_attributes = data["content_attributes"]
@@ -97,9 +107,13 @@ def rasa():
         message = "\n".join(submitted_values_text_list)
 
     if (
-        message_type == "incoming" or data.get("event") == "message_updated"
+        message_type == "incoming"
+        or data.get("event") == "message_updated"
+        or is_bot_mention
     ) and conversation_status == "pending":
-        text_response, response_button_list = send_to_bot(contact, message, conversation_id)
+        text_response, response_button_list = send_to_bot(
+            contact, message, conversation_id
+        )
         create_message = send_to_chatwoot(
             account, conversation_id, text_response, response_button_list
         )
