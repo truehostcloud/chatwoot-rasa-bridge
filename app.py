@@ -86,7 +86,8 @@ def rasa():
     message = data.get("content")
     conversation = data.get("conversation", {})
     conversation_id = conversation.get("id")
-    contact = data.get("sender", {}).get("id")
+    sender_id = data.get("sender", {}).get("id")
+    contact = sender_id
     account = data.get("account").get("id")
     create_message = {}
     conversation_status = data.get("conversation", {}).get("status")
@@ -116,6 +117,8 @@ def rasa():
     ) or is_bot_mention:
         if is_bot_mention and conversation_status == "pending":
             is_private = False
+        elif is_bot_mention:
+            contact = f"agent-{sender_id}"
         text_response, response_button_list = send_to_bot(
             contact, message, conversation_id
         )
