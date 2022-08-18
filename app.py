@@ -55,8 +55,10 @@ def send_to_bot(sender, message, conversation_id):
     return response_text, response_button_list
 
 
-def send_to_chatwoot(account, conversation, message, response_button_list):
-    data = {"content": message}
+def send_to_chatwoot(
+    account, conversation, message, response_button_list, is_private=False
+):
+    data = {"content": message, "private": is_private}
     if len(response_button_list) > 0:
         data["content_type"] = "input_select"
         data["content_attributes"] = {
@@ -80,6 +82,7 @@ app = Flask(__name__)
 def rasa():
     data = request.get_json()
     message_type = data.get("message_type")
+    is_private = data.get("private")
     message = data.get("content")
     conversation = data.get("conversation", {})
     conversation_id = conversation.get("id")
@@ -108,15 +111,20 @@ def rasa():
         message = "\n".join(submitted_values_text_list)
 
     if (
-        message_type == "incoming"
-        or data.get("event") == "message_updated"
-        or is_bot_mention
-    ) and conversation_status == "pending":
+        (message_type == "incoming" or data.get("event") == "message_updated")
+        and conversation_status == "pending"
+    ) or is_bot_mention:
+        if is_bot_mention and conversation_status == "pending":
+            is_private = False
         text_response, response_button_list = send_to_bot(
             contact, message, conversation_id
         )
         create_message = send_to_chatwoot(
-            account, conversation_id, text_response, response_button_list
+            account,
+            conversation_id,
+            text_response,
+            response_button_list,
+            is_private=is_private,
         )
     return create_message
 
