@@ -112,6 +112,7 @@ def rasa():
         conversation_status = data.get("conversation").get("status")
     else:
         conversation_status = data.get("status")
+        conversation_id = data.get("messages", [{}])[0].get("conversation_id")
     allow_bot_mention = os.getenv("ALLOW_BOT_MENTION", "False")
     bot_name = os.getenv("BOT_NAME")
     is_bot_mention = False
