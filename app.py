@@ -2,6 +2,8 @@ import json
 
 import requests
 import os
+
+from elasticapm.contrib.flask import ElasticAPM
 from flask import Flask, request
 import jwt
 
@@ -85,6 +87,12 @@ def send_to_chatwoot(
 
 
 app = Flask(__name__)
+app.config['ELASTIC_APM'] = {
+    "SERVICE_NAME": os.getenv("ELASTIC_APM_SERVICE_NAME", "chatwoot-rasa"),
+    "SERVICE_URL": os.getenv("ELASTIC_APM_SERVICE_URL", "http://localhost:8200"),
+    "ENVIRONMENT": os.getenv("ELASTIC_APM_ENVIRONMENT", "production"),
+}
+apm = ElasticAPM(app)
 
 
 @app.route("/", methods=["POST"])
