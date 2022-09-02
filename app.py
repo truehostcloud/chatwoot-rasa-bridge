@@ -1,5 +1,3 @@
-import json
-
 import requests
 import os
 
@@ -7,12 +5,12 @@ from elasticapm.contrib.flask import ElasticAPM
 from flask import Flask, request
 import jwt
 
-rasa_url = os.environ.get("RASA_URL")
-chatwoot_url = os.environ.get("CHATWOOT_URL")
-chatwoot_bot_token = os.environ.get("CHATWOOT_BOT_TOKEN")
-rasa_channel = os.environ.get("RASA_CHANNEL")
-rasa_jwt_token_secret = os.environ.get("RASA_JWT_TOKEN_SECRET")
-csat_message = os.environ.get("CHATWOOT_CSAT_MESSAGE", "Please rate the conversation")
+rasa_url = os.getenv("RASA_URL")
+chatwoot_url = os.getenv("CHATWOOT_URL")
+chatwoot_bot_token = os.getenv("CHATWOOT_BOT_TOKEN")
+rasa_channel = os.getenv("RASA_CHANNEL")
+rasa_jwt_token_secret = os.getenv("RASA_JWT_TOKEN_SECRET")
+csat_message = os.getenv("CHATWOOT_CSAT_MESSAGE", "Please rate the conversation")
 
 
 def extract_bot_response(response_json):
@@ -89,7 +87,7 @@ def send_to_chatwoot(
 app = Flask(__name__)
 app.config['ELASTIC_APM'] = {
     "SERVICE_NAME": os.getenv("ELASTIC_APM_SERVICE_NAME", "chatwoot-rasa"),
-    "SERVICE_URL": os.getenv("ELASTIC_APM_SERVICE_URL", "http://localhost:8200"),
+    "SERVER_URL": os.getenv("ELASTIC_APM_SERVER_URL"),
     "ENVIRONMENT": os.getenv("ELASTIC_APM_ENVIRONMENT", "production"),
 }
 apm = ElasticAPM(app)
@@ -105,9 +103,15 @@ def rasa():
     conversation_id = conversation.get("id")
     sender_id = data.get("sender", {}).get("id")
     contact = sender_id
-    account = data.get("account").get("id")
+    if data.get("account"):
+        account = data.get("account").get("id")
+    else:
+        account = data.get("messages").get("account_id")
     create_message = {}
-    conversation_status = data.get("conversation", {}).get("status")
+    if data.get("conversation"):
+        conversation_status = data.get("conversation").get("status")
+    else:
+        conversation_status = data.get("status")
     allow_bot_mention = os.getenv("ALLOW_BOT_MENTION", "False")
     bot_name = os.getenv("BOT_NAME")
     is_bot_mention = False
@@ -146,11 +150,7 @@ def rasa():
             response_button_list,
             is_private=is_private,
         )
-    elif (
-        message_type == "outgoing"
-        and data.get("event") == "message_updated"
-        and conversation_status == "resolved"
-    ):
+    elif conversation_status == "resolved":
         create_message = send_to_chatwoot(
             account, conversation_id, None, [], send_csat=True
         )
