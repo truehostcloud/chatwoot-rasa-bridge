@@ -10,6 +10,7 @@ chatwoot_url = os.environ.get("CHATWOOT_URL")
 chatwoot_bot_token = os.environ.get("CHATWOOT_BOT_TOKEN")
 rasa_channel = os.environ.get("RASA_CHANNEL")
 rasa_jwt_token_secret = os.environ.get("RASA_JWT_TOKEN_SECRET")
+csat_message = os.environ.get("CHATWOOT_CSAT_MESSAGE", "Please rate the conversation")
 
 
 def extract_bot_response(response_json):
@@ -56,7 +57,12 @@ def send_to_bot(sender, message, conversation_id):
 
 
 def send_to_chatwoot(
-    account, conversation, message, response_button_list, is_private=False
+    account,
+    conversation,
+    message,
+    response_button_list,
+    is_private=False,
+    send_csat=False,
 ):
     data = {"content": message, "private": is_private}
     if len(response_button_list) > 0:
@@ -64,6 +70,9 @@ def send_to_chatwoot(
         data["content_attributes"] = {
             "items": response_button_list,
         }
+    if send_csat:
+        data["content_type"] = "input_csat"
+        data["content"] = csat_message
     url = f"{chatwoot_url}/api/v1/accounts/{account}/conversations/{conversation}/messages"
     headers = {
         "Content-Type": "application/json",
@@ -128,6 +137,14 @@ def rasa():
             text_response,
             response_button_list,
             is_private=is_private,
+        )
+    elif (
+        message_type == "outgoing"
+        and data.get("event") == "message_updated"
+        and conversation_status == "resolved"
+    ):
+        create_message = send_to_chatwoot(
+            account, conversation_id, None, [], send_csat=True
         )
     return create_message
 
