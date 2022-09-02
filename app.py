@@ -102,6 +102,7 @@ def rasa():
     conversation = data.get("conversation", {})
     conversation_id = conversation.get("id")
     sender_id = data.get("sender", {}).get("id")
+    content_type = data.get("content_type")
     contact = sender_id
     if data.get("account"):
         account = data.get("account").get("id")
@@ -124,7 +125,7 @@ def rasa():
         contact = data["conversation"]["contact_inbox"]["contact_id"]
         message = message.replace(f"@{bot_name}", "")
         is_bot_mention = True
-    if data.get("event") == "message_updated":
+    if data.get("event") == "message_updated" and content_type != "input_csat":
         contact = data["conversation"]["contact_inbox"]["contact_id"]
         content_attributes = data["content_attributes"]
         submitted_values = content_attributes.get("submitted_values", [])
@@ -135,7 +136,7 @@ def rasa():
 
     if (
         (message_type == "incoming" or data.get("event") == "message_updated")
-        and conversation_status == "pending"
+        and conversation_status == "pending" and content_type != "input_csat"
     ) or is_bot_mention:
         if is_bot_mention and conversation_status == "pending":
             is_private = False
