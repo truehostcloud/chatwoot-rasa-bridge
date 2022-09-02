@@ -151,7 +151,7 @@ def rasa():
             response_button_list,
             is_private=is_private,
         )
-    elif conversation_status == "resolved":
+    elif conversation_status == "resolved" and message_type is None:
         create_message = send_to_chatwoot(
             account, conversation_id, None, [], send_csat=True
         )
