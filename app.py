@@ -106,7 +106,7 @@ def rasa():
     if data.get("account"):
         account = data.get("account").get("id")
     else:
-        account = data.get("messages").get("account_id")
+        account = data.get("messages", [{}])[0].get("account_id")
     create_message = {}
     if data.get("conversation"):
         conversation_status = data.get("conversation").get("status")
