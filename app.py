@@ -77,8 +77,8 @@ def send_to_chatwoot(
             "items": response_button_list,
         }
     if len(custom_json_response.keys()) > 0:
+        data["content_type"] = custom_json_response.get("type")
         data["content_attributes"] = {
-            "content_type": custom_json_response.get("type"),
             "items": custom_json_response.get("elements"),
         }
     if send_csat:
