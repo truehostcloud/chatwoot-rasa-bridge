@@ -15,6 +15,7 @@ csat_message = os.getenv("CHATWOOT_CSAT_MESSAGE", "Please rate the conversation"
 
 def extract_bot_response(response_json):
     response_button_list = []
+    custom_json_response = {}
     if type(response_json) == list:
         response_text_list = []
         for response_object in response_json:
@@ -29,10 +30,12 @@ def extract_bot_response(response_json):
                             "value": button.get("payload"),
                         }
                     )
+            if response_object.get("custom"):
+                custom_json_response = response_object.get("custom")
         response_text = "\n".join(response_text_list)
     else:
         response_text = response_json.get("message")
-    return response_text, response_button_list
+    return response_text, response_button_list, custom_json_response
 
 
 def send_to_bot(sender, message, conversation_id):
@@ -52,8 +55,10 @@ def send_to_bot(sender, message, conversation_id):
         headers=headers,
     )
     response_json = r.json()
-    response_text, response_button_list = extract_bot_response(response_json)
-    return response_text, response_button_list
+    response_text, response_button_list, custom_json_response = extract_bot_response(
+        response_json
+    )
+    return response_text, response_button_list, custom_json_response
 
 
 def send_to_chatwoot(
@@ -61,6 +66,7 @@ def send_to_chatwoot(
     conversation,
     message,
     response_button_list,
+    custom_json_response,
     is_private=False,
     send_csat=False,
 ):
@@ -69,6 +75,11 @@ def send_to_chatwoot(
         data["content_type"] = "input_select"
         data["content_attributes"] = {
             "items": response_button_list,
+        }
+    if len(custom_json_response.keys()) > 0:
+        data["content_attributes"] = {
+            "content_type": custom_json_response.get("type"),
+            "items": custom_json_response.get("elements"),
         }
     if send_csat:
         data["content_type"] = "input_csat"
@@ -85,7 +96,7 @@ def send_to_chatwoot(
 
 
 app = Flask(__name__)
-app.config['ELASTIC_APM'] = {
+app.config["ELASTIC_APM"] = {
     "SERVICE_NAME": os.getenv("ELASTIC_APM_SERVICE_NAME", "chatwoot-rasa"),
     "SERVER_URL": os.getenv("ELASTIC_APM_SERVER_URL"),
     "ENVIRONMENT": os.getenv("ELASTIC_APM_ENVIRONMENT", "production"),
@@ -136,13 +147,14 @@ def rasa():
 
     if (
         (message_type == "incoming" or data.get("event") == "message_updated")
-        and conversation_status == "pending" and content_type != "input_csat"
+        and conversation_status == "pending"
+        and content_type != "input_csat"
     ) or is_bot_mention:
         if is_bot_mention and conversation_status == "pending":
             is_private = False
         elif is_bot_mention:
             contact = f"agent-{sender_id}"
-        text_response, response_button_list = send_to_bot(
+        text_response, response_button_list, custom_json_response = send_to_bot(
             contact, message, conversation_id
         )
         create_message = send_to_chatwoot(
@@ -150,6 +162,7 @@ def rasa():
             conversation_id,
             text_response,
             response_button_list,
+            custom_json_response,
             is_private=is_private,
         )
     elif conversation_status == "resolved" and message_type is None:
