@@ -14,6 +14,11 @@ csat_message = os.getenv("CHATWOOT_CSAT_MESSAGE", "Please rate the conversation"
 
 
 def extract_bot_response(response_json):
+    """
+    Extract bot response
+    :param response_json: response json
+    :return: (response_text, response_button_list, custom_json_response)
+    """
     response_button_list = []
     custom_json_response = {}
     if type(response_json) == list:
@@ -39,6 +44,13 @@ def extract_bot_response(response_json):
 
 
 def send_to_bot(sender, message, conversation_id):
+    """
+    Send message to bot
+    :param sender: sender id
+    :param message: message to be sent
+    :param conversation_id: conversation id
+    :return: (response_text, response_button_list, custom_json_response)
+    """
     username = f"{sender}_{conversation_id}"
     data = {"sender": username, "message": message}
     jwt_payload = {"user": {"username": username, "role": "guest"}}
@@ -70,6 +82,16 @@ def send_to_chatwoot(
     is_private=False,
     send_csat=False,
 ):
+    """
+    Send message to chatwoot
+    :param account: account id
+    :param conversation: conversation id
+    :param message: message to be sent
+    :param response_button_list: list of buttons to be sent
+    :param custom_json_response: custom json response
+    :param is_private: is the message private
+    :param send_csat: send csat message
+    """
     data = {"content": message, "private": is_private}
     if len(response_button_list) > 0:
         data["content_type"] = "input_select"
@@ -91,6 +113,24 @@ def send_to_chatwoot(
         "api_access_token": f"{chatwoot_bot_token}",
     }
 
+    r = requests.post(url, json=data, headers=headers)
+    return r.json()
+
+
+def toggle_typing_status(account, conversation, status):
+    """
+    Toggle typing status of the bot
+    :param account: account id
+    :param conversation: conversation id
+    :param status: typing status
+    """
+    url = f"{chatwoot_url}/api/v1/accounts/{account}/conversations/{conversation}/toggle_typing_status"
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "api_access_token": f"{chatwoot_bot_token}",
+    }
+    data = {"status": status}
     r = requests.post(url, json=data, headers=headers)
     return r.json()
 
@@ -154,6 +194,7 @@ def rasa():
             is_private = False
         elif is_bot_mention:
             contact = f"agent-{sender_id}"
+        toggle_typing_status(account, conversation_id, "on")
         text_response, response_button_list, custom_json_response = send_to_bot(
             contact, message, conversation_id
         )
@@ -165,9 +206,10 @@ def rasa():
             custom_json_response,
             is_private=is_private,
         )
+        toggle_typing_status(account, conversation_id, "off")
     elif conversation_status == "resolved" and message_type is None:
         create_message = send_to_chatwoot(
-            account, conversation_id, None, [], send_csat=True
+            account, conversation_id, None, [], {}, send_csat=True
         )
     return create_message
 
