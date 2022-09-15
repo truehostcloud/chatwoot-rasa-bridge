@@ -6,7 +6,7 @@ COPY . .
 
 RUN pip install -r requirements.txt
 RUN apt update
-RUN apt install -y libgomp1
+RUN apt install -y ffmpeg libsm6 libxext6
 
 EXPOSE 8000
 
