@@ -1,10 +1,12 @@
-FROM python:3.9-slim
+FROM python:3.9
 
 WORKDIR /app
 
 COPY . .
 
 RUN pip install -r requirements.txt
+RUN apt update
+RUN apt install -y libgomp1
 
 EXPOSE 8000
 
