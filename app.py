@@ -5,12 +5,22 @@ from elasticapm.contrib.flask import ElasticAPM
 from flask import Flask, request
 import jwt
 
+from image_to_text import get_text_from_image
+
 rasa_url = os.getenv("RASA_URL")
 chatwoot_url = os.getenv("CHATWOOT_URL")
 chatwoot_bot_token = os.getenv("CHATWOOT_BOT_TOKEN")
 rasa_channel = os.getenv("RASA_CHANNEL")
 rasa_jwt_token_secret = os.getenv("RASA_JWT_TOKEN_SECRET")
 csat_message = os.getenv("CHATWOOT_CSAT_MESSAGE", "Please rate the conversation")
+try:
+    enable_csat = int(os.getenv("CHATWOOT_ENABLE_CSAT", "0"))
+except ValueError:
+    enable_csat = 0
+try:
+    typing_status_enabled = int(os.getenv("CHATWOOT_TYPING_STATUS_ENABLED", "0"))
+except ValueError:
+    typing_status_enabled = 0
 
 
 def extract_bot_response(response_json):
@@ -135,6 +145,19 @@ def toggle_typing_status(account, conversation, status):
     return r.json()
 
 
+def get_message_attachments(conversation):
+    """
+    Extract attachments urls from conversation messages
+    :param conversation: conversation object
+    :return:
+    """
+    attachments = []
+    for message in conversation.get("messages", []):
+        for attachment in message.get("attachments", []):
+            attachments.append(attachment.get("data_url"))
+    return attachments
+
+
 app = Flask(__name__)
 app.config["ELASTIC_APM"] = {
     "SERVICE_NAME": os.getenv("ELASTIC_APM_SERVICE_NAME", "chatwoot-rasa"),
@@ -154,6 +177,11 @@ def rasa():
     conversation_id = conversation.get("id")
     sender_id = data.get("sender", {}).get("id")
     content_type = data.get("content_type")
+    attachments = get_message_attachments(conversation)
+    if message is None and data.get("event") == "message_created" and len(attachments) > 0:
+        message = ""
+        for attachment in attachments:
+            message += get_text_from_image(attachment)
     contact = sender_id
     if data.get("account"):
         account = data.get("account").get("id")
@@ -194,7 +222,8 @@ def rasa():
             is_private = False
         elif is_bot_mention:
             contact = f"agent-{sender_id}"
-        toggle_typing_status(account, conversation_id, "on")
+        if typing_status_enabled:
+            toggle_typing_status(account, conversation_id, "on")
         text_response, response_button_list, custom_json_response = send_to_bot(
             contact, message, conversation_id
         )
@@ -206,8 +235,10 @@ def rasa():
             custom_json_response,
             is_private=is_private,
         )
+        if typing_status_enabled:
+            toggle_typing_status(account, conversation_id, "off")
         toggle_typing_status(account, conversation_id, "off")
-    elif conversation_status == "resolved" and message_type is None:
+    elif conversation_status == "resolved" and message_type is None and enable_csat:
         create_message = send_to_chatwoot(
             account, conversation_id, None, [], {}, send_csat=True
         )
