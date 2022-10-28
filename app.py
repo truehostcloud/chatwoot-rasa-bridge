@@ -1,3 +1,6 @@
+import base64
+import io
+
 import requests
 import os
 
@@ -23,14 +26,30 @@ except ValueError:
     typing_status_enabled = 0
 
 
+def get_image_file(image_url) -> io.BytesIO:
+    """
+    Get image file from url
+    :param image_url: image url
+    :return: image file
+    """
+    if image_url.startswith("data:image/png;base64,"):
+        image_content = image_url.replace("data:image/png;base64,", "")
+        image_content = base64.b64decode(image_content)
+    else:
+        image_content = requests.get(image_url).content
+    image_file = io.BytesIO(image_content)
+    return image_file
+
+
 def extract_bot_response(response_json):
     """
     Extract bot response
     :param response_json: response json
-    :return: (response_text, response_button_list, custom_json_response)
+    :return: (response_text, response_button_list, custom_json_response, image_file)
     """
     response_button_list = []
     custom_json_response = {}
+    image_file = None
     if type(response_json) == list:
         response_text_list = []
         for response_object in response_json:
@@ -47,10 +66,13 @@ def extract_bot_response(response_json):
                     )
             if response_object.get("custom"):
                 custom_json_response = response_object.get("custom")
+            if response_object.get("image"):
+                image_url = response_object.get("image")
+                image_file = get_image_file(image_url)
         response_text = "\n".join(response_text_list)
     else:
         response_text = response_json.get("message")
-    return response_text, response_button_list, custom_json_response
+    return response_text, response_button_list, custom_json_response, image_file
 
 
 def send_to_bot(sender, message, conversation_id):
@@ -59,7 +81,7 @@ def send_to_bot(sender, message, conversation_id):
     :param sender: sender id
     :param message: message to be sent
     :param conversation_id: conversation id
-    :return: (response_text, response_button_list, custom_json_response)
+    :return: (response_text, response_button_list, custom_json_response, image_file)
     """
     username = f"{sender}_{conversation_id}"
     data = {"sender": username, "message": message}
@@ -77,10 +99,13 @@ def send_to_bot(sender, message, conversation_id):
         headers=headers,
     )
     response_json = r.json()
-    response_text, response_button_list, custom_json_response = extract_bot_response(
-        response_json
-    )
-    return response_text, response_button_list, custom_json_response
+    (
+        response_text,
+        response_button_list,
+        custom_json_response,
+        image_file,
+    ) = extract_bot_response(response_json)
+    return response_text, response_button_list, custom_json_response, image_file
 
 
 def send_to_chatwoot(
@@ -89,6 +114,7 @@ def send_to_chatwoot(
     message,
     response_button_list,
     custom_json_response,
+    image_file,
     is_private=False,
     send_csat=False,
 ):
@@ -99,6 +125,7 @@ def send_to_chatwoot(
     :param message: message to be sent
     :param response_button_list: list of buttons to be sent
     :param custom_json_response: custom json response
+    :param image_file: image file
     :param is_private: is the message private
     :param send_csat: send csat message
     """
@@ -117,13 +144,23 @@ def send_to_chatwoot(
         data["content_type"] = "input_csat"
         data["content"] = csat_message
     url = f"{chatwoot_url}/api/v1/accounts/{account}/conversations/{conversation}/messages"
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "api_access_token": f"{chatwoot_bot_token}",
-    }
+    if image_file:
+        files = [
+            ('attachments[]', ('screenshot.png', image_file, 'image/png'))
+        ]
+        headers = {
+            "Accept": "application/json",
+            "api_access_token": f"{chatwoot_bot_token}",
+        }
+        r = requests.post(url, data=data, files=files, headers=headers)
+    else:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "api_access_token": f"{chatwoot_bot_token}",
+        }
 
-    r = requests.post(url, json=data, headers=headers)
+        r = requests.post(url, json=data, headers=headers)
     return r.json()
 
 
@@ -178,7 +215,11 @@ def rasa():
     sender_id = data.get("sender", {}).get("id")
     content_type = data.get("content_type")
     attachments = get_message_attachments(conversation)
-    if message is None and data.get("event") == "message_created" and len(attachments) > 0:
+    if (
+        message is None
+        and data.get("event") == "message_created"
+        and len(attachments) > 0
+    ):
         message = ""
         for attachment in attachments:
             message += get_text_from_image(attachment)
@@ -224,7 +265,7 @@ def rasa():
             contact = f"agent-{sender_id}"
         if typing_status_enabled:
             toggle_typing_status(account, conversation_id, "on")
-        text_response, response_button_list, custom_json_response = send_to_bot(
+        text_response, response_button_list, custom_json_response, image_file = send_to_bot(
             contact, message, conversation_id
         )
         create_message = send_to_chatwoot(
@@ -233,6 +274,7 @@ def rasa():
             text_response,
             response_button_list,
             custom_json_response,
+            image_file,
             is_private=is_private,
         )
         if typing_status_enabled:
@@ -240,7 +282,7 @@ def rasa():
         toggle_typing_status(account, conversation_id, "off")
     elif conversation_status == "resolved" and message_type is None and enable_csat:
         create_message = send_to_chatwoot(
-            account, conversation_id, None, [], {}, send_csat=True
+            account, conversation_id, None, [], {}, None, send_csat=True
         )
     return create_message
 
