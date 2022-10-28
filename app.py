@@ -145,6 +145,8 @@ def send_to_chatwoot(
         data["content"] = csat_message
     url = f"{chatwoot_url}/api/v1/accounts/{account}/conversations/{conversation}/messages"
     if image_file:
+        if data.get("private") is False:
+            data.pop("private")
         files = [
             ('attachments[]', ('screenshot.png', image_file, 'image/png'))
         ]
