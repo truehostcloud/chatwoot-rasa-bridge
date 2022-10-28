@@ -1,5 +1,6 @@
 import base64
 import io
+import uuid
 
 import requests
 import os
@@ -147,8 +148,9 @@ def send_to_chatwoot(
     if image_file:
         if data.get("private") is False:
             data.pop("private")
+        image_name = f"{uuid.uuid4().hex}.png"
         files = [
-            ('attachments[]', ('screenshot.png', image_file, 'image/png'))
+            ('attachments[]', (image_name, image_file, 'image/png'))
         ]
         headers = {
             "Accept": "application/json",
