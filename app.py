@@ -33,8 +33,8 @@ def get_image_file(image_url) -> io.BytesIO:
     :param image_url: image url
     :return: image file
     """
-    if image_url.startswith("data:image/png;base64,"):
-        image_content = image_url.replace("data:image/png;base64,", "")
+    if image_url.startswith("data:image/jpg;base64,"):
+        image_content = image_url.replace("data:image/jpg;base64,", "")
         image_content = base64.b64decode(image_content)
     else:
         image_content = requests.get(image_url).content
@@ -148,9 +148,9 @@ def send_to_chatwoot(
     if image_file:
         if data.get("private") is False:
             data.pop("private")
-        image_name = f"{uuid.uuid4().hex}.png"
+        image_name = f"{uuid.uuid4().hex}.jpg"
         files = [
-            ('attachments[]', (image_name, image_file, 'image/png'))
+            ('attachments[]', (image_name, image_file, 'image/jpg'))
         ]
         headers = {
             "Accept": "application/json",
