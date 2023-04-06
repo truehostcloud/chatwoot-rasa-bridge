@@ -208,8 +208,15 @@ app.config["ELASTIC_APM"] = {
 apm = ElasticAPM(app)
 
 
+@app.route("/", methods=["GET"])
+def health_check():
+    """Health check endpoint"""
+    return "OK"
+
+
 @app.route("/", methods=["POST"])
 def rasa():
+    """Rasa endpoint"""
     data = request.get_json()
     message_type = data.get("message_type")
     is_private = data.get("private")
