@@ -208,7 +208,7 @@ app.config["ELASTIC_APM"] = {
 apm = ElasticAPM(app)
 
 
-@app.route("/", methods=["GET"])
+@app.route("/health-check/", methods=["GET"])
 def health_check():
     """Health check endpoint"""
     return "OK"
