@@ -269,6 +269,7 @@ def rasa():
         (message_type == "incoming" or data.get("event") == "message_updated")
         and conversation_status == "pending"
         and content_type != "input_csat"
+        and message not in ["", None]
     ) or is_bot_mention:
         if is_bot_mention and conversation_status == "pending":
             is_private = False
