@@ -17,6 +17,7 @@ chatwoot_bot_token = os.getenv("CHATWOOT_BOT_TOKEN")
 rasa_channel = os.getenv("RASA_CHANNEL")
 rasa_jwt_token_secret = os.getenv("RASA_JWT_TOKEN_SECRET")
 csat_message = os.getenv("CHATWOOT_CSAT_MESSAGE", "Please rate the conversation")
+max_message_characters = int(os.getenv("MAX_MESSAGE_CHARACTERS", "420"))
 try:
     enable_csat = int(os.getenv("CHATWOOT_ENABLE_CSAT", "0"))
 except ValueError:
@@ -84,6 +85,7 @@ def send_to_bot(sender, message, conversation_id):
     :param conversation_id: conversation id
     :return: (response_text, response_button_list, custom_json_response, image_file)
     """
+    message = message[:max_message_characters]
     username = f"{sender}_{conversation_id}"
     data = {"sender": username, "message": message}
     jwt_payload = {"user": {"username": username, "role": "guest"}}
