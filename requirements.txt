@@ -7,3 +7,4 @@ elastic-apm[flask]==6.11.0
 paddleocr==2.6.0.1
 paddlepaddle==2.3.2
 Numpy==1.23.5
+pypdf==4.2.0

@@ -9,7 +9,7 @@ from elasticapm.contrib.flask import ElasticAPM
 from flask import Flask, request
 import jwt
 
-from image_to_text import get_text_from_image
+from utils import get_text_from_image, get_text_from_pdf
 
 rasa_url = os.getenv("RASA_URL")
 chatwoot_url = os.getenv("CHATWOOT_URL")
@@ -227,15 +227,18 @@ def rasa():
     conversation_id = conversation.get("id")
     sender_id = data.get("sender", {}).get("id")
     content_type = data.get("content_type")
-    attachments = get_message_attachments(conversation)
+    attachments_urls = get_message_attachments(conversation)
     if (
         message is None
         and data.get("event") == "message_created"
-        and len(attachments) > 0
+        and len(attachments_urls) > 0
     ):
         message = ""
-        for attachment in attachments:
-            message += get_text_from_image(attachment)
+        for attachment_url in attachments_urls:
+            if attachment_url.endswith(".pdf"):
+                message += get_text_from_pdf(attachment_url)
+            else:
+                message += get_text_from_image(attachment_url)
     contact = sender_id
     if data.get("account"):
         account = data.get("account").get("id")
