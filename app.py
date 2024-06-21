@@ -26,6 +26,10 @@ try:
     typing_status_enabled = int(os.getenv("CHATWOOT_TYPING_STATUS_ENABLED", "0"))
 except ValueError:
     typing_status_enabled = 0
+try:
+    EMPTY_BOT_RESPONSE_RETRY_COUNT = int(os.getenv("EMPTY_BOT_RESPONSE_RETRY_COUNT", "3"))
+except ValueError:
+    EMPTY_BOT_RESPONSE_RETRY_COUNT = 3
 
 
 def get_image_file(image_url) -> io.BytesIO:
@@ -52,7 +56,7 @@ def extract_bot_response(response_json):
     response_button_list = []
     custom_json_response = {}
     image_file = None
-    if type(response_json) == list:
+    if type(response_json) is list:
         response_text_list = []
         for response_object in response_json:
             if response_object.get("text"):
@@ -74,7 +78,19 @@ def extract_bot_response(response_json):
         response_text = "\n".join(response_text_list)
     else:
         response_text = response_json.get("message")
-    return response_text, response_button_list, custom_json_response, image_file
+    is_empty_response = (
+        not response_text
+        and not response_button_list
+        and not custom_json_response
+        and not image_file
+    )
+    return (
+        response_text,
+        response_button_list,
+        custom_json_response,
+        image_file,
+        is_empty_response,
+    )
 
 
 def send_to_bot(sender, message, conversation_id):
@@ -95,20 +111,37 @@ def send_to_bot(sender, message, conversation_id):
         "Accept": "application/json",
         "Authorization": f"Bearer {rasa_jwt_token}",
     }
+    response_button_list = []
+    custom_json_response = {}
+    image_file = None
+    response_text = ""
+    is_empty_response = False
 
-    r = requests.post(
-        f"{rasa_url}/webhooks/{rasa_channel}/webhook",
-        json=data,
-        headers=headers,
-    )
-    response_json = r.json()
-    (
+    for _ in range(EMPTY_BOT_RESPONSE_RETRY_COUNT):
+        r = requests.post(
+            f"{rasa_url}/webhooks/{rasa_channel}/webhook",
+            json=data,
+            headers=headers,
+        )
+        response_json = r.json()
+        (
+            response_text,
+            response_button_list,
+            custom_json_response,
+            image_file,
+            is_empty_response,
+        ) = extract_bot_response(response_json)
+
+        if not is_empty_response:
+            break
+
+    return (
         response_text,
         response_button_list,
         custom_json_response,
         image_file,
-    ) = extract_bot_response(response_json)
-    return response_text, response_button_list, custom_json_response, image_file
+        is_empty_response,
+    )
 
 
 def send_to_chatwoot(
@@ -151,9 +184,7 @@ def send_to_chatwoot(
         if data.get("private") is False:
             data.pop("private")
         image_name = f"{uuid.uuid4().hex}.jpg"
-        files = [
-            ('attachments[]', (image_name, image_file, 'image/jpg'))
-        ]
+        files = [("attachments[]", (image_name, image_file, "image/jpg"))]
         headers = {
             "Accept": "application/json",
             "api_access_token": f"{chatwoot_bot_token}",
@@ -282,9 +313,13 @@ def rasa():
             contact = f"agent-{sender_id}"
         if typing_status_enabled:
             toggle_typing_status(account, conversation_id, "on")
-        text_response, response_button_list, custom_json_response, image_file = send_to_bot(
-            contact, message, conversation_id
-        )
+        (
+            text_response,
+            response_button_list,
+            custom_json_response,
+            image_file,
+            is_empty_response,
+        ) = send_to_bot(contact, message, conversation_id)
         create_message = send_to_chatwoot(
             account,
             conversation_id,
