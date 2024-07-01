@@ -28,9 +28,9 @@ try:
 except ValueError:
     typing_status_enabled = 0
 try:
-    EMPTY_BOT_RESPONSE_RETRY_COUNT = int(os.getenv("EMPTY_BOT_RESPONSE_RETRY_COUNT", "3"))
+    BOT_RESPONSE_RETRY_COUNT = int(os.getenv("BOT_RESPONSE_RETRY_COUNT", "3"))
 except ValueError:
-    EMPTY_BOT_RESPONSE_RETRY_COUNT = 3
+    BOT_RESPONSE_RETRY_COUNT = 3
 try:
     SLEEP_SECONDS_BETWEEN_RETRIES = int(os.getenv("SLEEP_SECONDS_BETWEEN_RETRIES", "5"))
 except ValueError:
@@ -122,13 +122,16 @@ def send_to_bot(sender, message, conversation_id):
     response_text = ""
     is_empty_response = False
 
-    for _ in range(EMPTY_BOT_RESPONSE_RETRY_COUNT):
-        r = requests.post(
+    for _ in range(BOT_RESPONSE_RETRY_COUNT):
+        response = requests.post(
             f"{rasa_url}/webhooks/{rasa_channel}/webhook",
             json=data,
             headers=headers,
         )
-        response_json = r.json()
+        if response.status_code == 503:
+            time.sleep(SLEEP_SECONDS_BETWEEN_RETRIES)
+            continue
+        response_json = response.json()
         (
             response_text,
             response_button_list,
