@@ -1,5 +1,6 @@
 import base64
 import io
+import time
 import uuid
 
 import requests
@@ -30,6 +31,10 @@ try:
     EMPTY_BOT_RESPONSE_RETRY_COUNT = int(os.getenv("EMPTY_BOT_RESPONSE_RETRY_COUNT", "3"))
 except ValueError:
     EMPTY_BOT_RESPONSE_RETRY_COUNT = 3
+try:
+    SLEEP_SECONDS_BETWEEN_RETRIES = int(os.getenv("SLEEP_SECONDS_BETWEEN_RETRIES", "5"))
+except ValueError:
+    SLEEP_SECONDS_BETWEEN_RETRIES = 5
 
 
 def get_image_file(image_url) -> io.BytesIO:
@@ -134,6 +139,7 @@ def send_to_bot(sender, message, conversation_id):
 
         if not is_empty_response:
             break
+        time.sleep(SLEEP_SECONDS_BETWEEN_RETRIES)
 
     return (
         response_text,
