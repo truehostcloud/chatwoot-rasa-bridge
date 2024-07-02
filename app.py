@@ -265,7 +265,7 @@ def rasa():
     message = data.get("content")
     conversation = data.get("conversation", {})
     conversation_id = conversation.get("id")
-    sender_id = data.get("sender", {}).get("id")
+    sender_id = (data.get("sender") or {}).get("id")
     content_type = data.get("content_type")
     attachments_urls = get_message_attachments(conversation)
     if (
@@ -308,7 +308,7 @@ def rasa():
         submitted_values_text_list = [
             submitted_text.get("value") for submitted_text in submitted_values
         ]
-        message = "\n".join(f"{submitted_values_text_list}")
+        message = "\n".join(map(str, submitted_values_text_list))
 
     if (
         (message_type == "incoming" or data.get("event") == "message_updated")
