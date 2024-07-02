@@ -308,7 +308,7 @@ def rasa():
         submitted_values_text_list = [
             submitted_text.get("value") for submitted_text in submitted_values
         ]
-        message = "\n".join(submitted_values_text_list)
+        message = "\n".join(f"{submitted_values_text_list}")
 
     if (
         (message_type == "incoming" or data.get("event") == "message_updated")
