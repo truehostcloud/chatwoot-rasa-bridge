@@ -128,7 +128,7 @@ def send_to_bot(sender, message, conversation_id):
             json=data,
             headers=headers,
         )
-        if response.status_code == 503:
+        if response.status_code != 200:
             time.sleep(SLEEP_SECONDS_BETWEEN_RETRIES)
             continue
         response_json = response.json()
