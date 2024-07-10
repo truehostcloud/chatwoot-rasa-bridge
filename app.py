@@ -31,10 +31,6 @@ try:
     BOT_RESPONSE_RETRY_COUNT = int(os.getenv("BOT_RESPONSE_RETRY_COUNT", "3"))
 except ValueError:
     BOT_RESPONSE_RETRY_COUNT = 3
-try:
-    SLEEP_SECONDS_BETWEEN_RETRIES = int(os.getenv("SLEEP_SECONDS_BETWEEN_RETRIES", "5"))
-except ValueError:
-    SLEEP_SECONDS_BETWEEN_RETRIES = 5
 
 
 def get_image_file(image_url) -> io.BytesIO:
