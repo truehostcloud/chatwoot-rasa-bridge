@@ -31,10 +31,6 @@ try:
     BOT_RESPONSE_RETRY_COUNT = int(os.getenv("BOT_RESPONSE_RETRY_COUNT", "3"))
 except ValueError:
     BOT_RESPONSE_RETRY_COUNT = 3
-try:
-    SLEEP_SECONDS_BETWEEN_RETRIES = int(os.getenv("SLEEP_SECONDS_BETWEEN_RETRIES", "5"))
-except ValueError:
-    SLEEP_SECONDS_BETWEEN_RETRIES = 5
 
 
 def get_image_file(image_url) -> io.BytesIO:
@@ -121,28 +117,33 @@ def send_to_bot(sender, message, conversation_id):
     image_file = None
     response_text = ""
     is_empty_response = False
+    base_delay = 1
+    max_retries = BOT_RESPONSE_RETRY_COUNT
 
-    for _ in range(BOT_RESPONSE_RETRY_COUNT):
+    for attempt in range(max_retries):
         response = requests.post(
             f"{rasa_url}/webhooks/{rasa_channel}/webhook",
             json=data,
             headers=headers,
         )
-        if response.status_code != 200:
-            time.sleep(SLEEP_SECONDS_BETWEEN_RETRIES)
-            continue
-        response_json = response.json()
-        (
-            response_text,
-            response_button_list,
-            custom_json_response,
-            image_file,
-            is_empty_response,
-        ) = extract_bot_response(response_json)
+        if response.status_code == 200:
+            response_json = response.json()
+            (
+                response_text,
+                response_button_list,
+                custom_json_response,
+                image_file,
+                is_empty_response,
+            ) = extract_bot_response(response_json)
 
-        if not is_empty_response:
-            break
-        time.sleep(SLEEP_SECONDS_BETWEEN_RETRIES)
+            if not is_empty_response:
+                break
+        else:
+            delay = (2 ** attempt) * base_delay
+            time.sleep(delay)
+
+        if attempt == max_retries - 1:
+            print("Max retries reached. Exiting.")
 
     return (
         response_text,
