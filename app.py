@@ -31,6 +31,11 @@ try:
     BOT_RESPONSE_RETRY_COUNT = int(os.getenv("BOT_RESPONSE_RETRY_COUNT", "3"))
 except ValueError:
     BOT_RESPONSE_RETRY_COUNT = 3
+# https://developers.facebook.com/docs/whatsapp/guides/interactive-messages/
+try:
+    MAX_BUTTON_TITLE_LENGTH = int(os.getenv("MAX_BUTTON_TITLE_LENGTH", "24"))
+except ValueError:
+    MAX_BUTTON_TITLE_LENGTH = 24
 
 
 def get_image_file(image_url) -> io.BytesIO:
@@ -65,9 +70,12 @@ def extract_bot_response(response_json):
             if response_object.get("buttons"):
                 buttons_object = response_object.get("buttons")
                 for button in buttons_object:
+                    button_title = button.get("title")
+                    if len(button_title) > MAX_BUTTON_TITLE_LENGTH:
+                        button_title = button_title[: MAX_BUTTON_TITLE_LENGTH - 3] + "..."
                     response_button_list.append(
                         {
-                            "title": button.get("title"),
+                            "title": button_title,
                             "value": button.get("payload"),
                         }
                     )
