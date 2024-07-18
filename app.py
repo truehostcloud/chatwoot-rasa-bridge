@@ -72,7 +72,9 @@ def extract_bot_response(response_json):
                 for button in buttons_object:
                     button_title = button.get("title")
                     if len(button_title) > MAX_BUTTON_TITLE_LENGTH:
-                        button_title = button_title[: MAX_BUTTON_TITLE_LENGTH - 3] + "..."
+                        button_title = (
+                            button_title[: MAX_BUTTON_TITLE_LENGTH - 3] + "..."
+                        )
                     response_button_list.append(
                         {
                             "title": button_title,
@@ -147,7 +149,7 @@ def send_to_bot(sender, message, conversation_id):
             if not is_empty_response:
                 break
         else:
-            delay = (2 ** attempt) * base_delay
+            delay = (2**attempt) * base_delay
             time.sleep(delay)
 
         if attempt == max_retries - 1:
@@ -271,18 +273,13 @@ def rasa():
     data = request.get_json()
     message_type = data.get("message_type")
     is_private = data.get("private")
-    message = data.get("content")
+    message = data.get("content") or ""
     conversation = data.get("conversation", {})
     conversation_id = conversation.get("id")
     sender_id = (data.get("sender") or {}).get("id")
     content_type = data.get("content_type")
     attachments_urls = get_message_attachments(conversation)
-    if (
-        message is None
-        and data.get("event") == "message_created"
-        and len(attachments_urls) > 0
-    ):
-        message = ""
+    if data.get("event") == "message_created" and len(attachments_urls) > 0:
         for attachment_url in attachments_urls:
             if attachment_url.endswith(".pdf"):
                 message += get_text_from_pdf(attachment_url)
