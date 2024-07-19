@@ -36,6 +36,10 @@ try:
     MAX_BUTTON_TITLE_LENGTH = int(os.getenv("MAX_BUTTON_TITLE_LENGTH", "24"))
 except ValueError:
     MAX_BUTTON_TITLE_LENGTH = 24
+try:
+    MAX_NO_OF_BUTTONS = int(os.getenv("MAX_NO_OF_BUTTONS", "10"))
+except ValueError:
+    MAX_NO_OF_BUTTONS = 10
 
 
 def get_image_file(image_url) -> io.BytesIO:
@@ -89,6 +93,7 @@ def extract_bot_response(response_json):
         response_text = "\n".join(response_text_list)
     else:
         response_text = response_json.get("message")
+    response_button_list = response_button_list[:MAX_NO_OF_BUTTONS]
     is_empty_response = (
         not response_text
         and not response_button_list
