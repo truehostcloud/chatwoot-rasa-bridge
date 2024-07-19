@@ -351,7 +351,6 @@ def rasa():
         )
         if typing_status_enabled:
             toggle_typing_status(account, conversation_id, "off")
-        toggle_typing_status(account, conversation_id, "off")
     elif conversation_status == "resolved" and message_type is None and enable_csat:
         create_message = send_to_chatwoot(
             account, conversation_id, None, [], {}, None, send_csat=True
