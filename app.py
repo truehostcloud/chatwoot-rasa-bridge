@@ -153,7 +153,8 @@ def send_to_bot(sender, message, conversation_id):
 
             if not is_empty_response:
                 break
-        else:
+
+        if attempt < max_retries - 1 or is_empty_response:
             delay = (2**attempt) * base_delay
             time.sleep(delay)
 
