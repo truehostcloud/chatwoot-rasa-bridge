@@ -1,9 +1,9 @@
 Flask == 2.3.2
 requests == 2.31.0
 gunicorn == 20.1.0
-markupsafe==2.1.1
+markupsafe==2.1.5
 pyjwt==2.4.0
-elastic-apm[flask]==6.11.0
+elastic-apm[flask]==6.23.0
 paddleocr==2.6.0.1
 paddlepaddle==2.6.2
 Numpy==1.26.4
